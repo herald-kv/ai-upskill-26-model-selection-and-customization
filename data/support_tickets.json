@@ -1,0 +1,14 @@
+[
+  {"id": "T01", "text": "I was charged twice for order #88231. Please refund the duplicate payment.", "category": "billing", "complexity": "simple"},
+  {"id": "T02", "text": "How do I change the email address on my account?", "category": "account", "complexity": "simple"},
+  {"id": "T03", "text": "My parcel says delivered but it's not at my door or with my neighbours.", "category": "delivery", "complexity": "simple"},
+  {"id": "T04", "text": "The app crashes every time I open the cart on Android 15.", "category": "technical", "complexity": "simple"},
+  {"id": "T05", "text": "Can I return a laptop I bought 20 days ago? The box is opened but it's unused.", "category": "returns", "complexity": "simple"},
+  {"id": "T06", "text": "I got a refund for the headphones but my store credit from the earlier exchange disappeared, and now the coupon I applied on the second order shows as used even though that order was cancelled. Which of these do I actually get back?", "category": "billing", "complexity": "complex"},
+  {"id": "T07", "text": "Someone logged into my account from another country and placed an order with my saved card. I've already changed my password. What else should happen?", "category": "account", "complexity": "complex"},
+  {"id": "T08", "text": "We're a business customer with 40 seats. Half our team can't see the bulk-pricing tier since your update yesterday, and our invoices now show GST on items that should be exempt.", "category": "billing", "complexity": "complex"},
+  {"id": "T09", "text": "Your delivery partner left my fridge outside in the rain, and now it doesn't turn on. I want a replacement, not a repair, and the courier is denying it happened.", "category": "delivery", "complexity": "complex"},
+  {"id": "T10", "text": "The checkout page spins forever when I pay with UPI, but cards work. I've tried two browsers.", "category": "technical", "complexity": "simple"},
+  {"id": "T11", "text": "I want to return just one item from a combo offer. Do I lose the combo discount on the rest?", "category": "returns", "complexity": "complex"},
+  {"id": "T12", "text": "Please delete my account and all my data.", "category": "account", "complexity": "simple"}
+]

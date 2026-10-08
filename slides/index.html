@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Model Selection & Customization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0f1419; --surface: #1a222c; --surface-2: #222c38; --text: #e8eef4; --muted: #8b9aab;
+    --accent: #3d9cf0; --accent-2: #5ec4a8; --warn: #e8b86d; --bad: #e57373; --line: #2a3542;
+    --p1: #3d9cf0; --p2: #b48ef0; --p3: #5ec4a8;
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f8fa; --surface: #ffffff; --surface-2: #eef1f5; --text: #17202a; --muted: #5b6b7c;
+    --accent: #1f6fc4; --accent-2: #1d8a6e; --warn: #a86b00; --bad: #c0392b; --line: #d5dce4;
+    --p1: #1f6fc4; --p2: #7a4fc4; --p3: #1d8a6e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif; overflow: hidden; }
+  .deck { height: 100%; width: 100%; position: relative; }
+  .slide { display: none; height: 100%; padding: clamp(1.5rem, 4.5vw, 3.5rem) clamp(1.25rem, 6vw, 5rem) 4rem;
+    flex-direction: column; justify-content: center; gap: 1.1rem; max-width: 1180px; margin: 0 auto; overflow-y: auto; }
+  .slide.active { display: flex; }
+  .eyebrow { font-size: .82rem; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); font-weight: 600;
+    display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  .p1 .eyebrow { color: var(--p1); } .p2 .eyebrow { color: var(--p2); } .p3 .eyebrow { color: var(--p3); }
+  .demo-badge { background: var(--warn); color: #111; border-radius: 4px; padding: .1rem .5rem; font-size: .72rem; letter-spacing: .05em; }
+  h1 { font-size: clamp(2.1rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.12; max-width: 20ch; }
+  h2 { font-size: clamp(1.5rem, 3.3vw, 2.3rem); font-weight: 650; line-height: 1.2; }
+  h3 { font-size: 1.08rem; margin-bottom: .45rem; color: var(--accent-2); }
+  .subtitle { font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--muted); max-width: 52ch; line-height: 1.45; }
+  p { font-size: 1.1rem; line-height: 1.5; }
+  .muted { color: var(--muted); }
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: .65rem; font-size: clamp(1rem, 1.8vw, 1.18rem); line-height: 1.4; }
+  ul.points li::before { content: "→"; color: var(--accent); margin-right: .6rem; font-weight: 600; }
+  .grid-2, .grid-3, .grid-4 { display: grid; gap: 1rem; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(3, 1fr); } .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.25rem; }
+  .card p, .card li { font-size: .98rem; color: var(--muted); line-height: 1.45; }
+  .card ul { padding-left: 1.1rem; display: flex; flex-direction: column; gap: .3rem; }
+  .card.hl { border-color: var(--accent); }
+  .big { font-size: 2.2rem; font-weight: 700; color: var(--text); }
+  .thesis { font-size: clamp(1.15rem, 2.4vw, 1.45rem); font-weight: 600; padding: 1rem 1.25rem; border-left: 3px solid var(--accent);
+    background: var(--surface); border-radius: 0 8px 8px 0; line-height: 1.4; }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .92em; }
+  pre { font-family: "IBM Plex Mono", monospace; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1rem 1.2rem; font-size: clamp(.78rem, 1.4vw, .95rem); line-height: 1.5; overflow-x: auto; white-space: pre; }
+  .run { font-family: "IBM Plex Mono", monospace; background: var(--surface-2); border: 1px dashed var(--warn); border-radius: 8px;
+    padding: .6rem 1rem; font-size: .95rem; color: var(--warn); overflow-x: auto; white-space: nowrap; }
+  table { border-collapse: collapse; width: 100%; font-size: clamp(.82rem, 1.5vw, 1rem); }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .85em; text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  .good { color: var(--accent-2); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .flow { display: flex; align-items: stretch; gap: .5rem; flex-wrap: wrap; }
+  .flow .step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .7rem .9rem; flex: 1 1 120px; font-size: .95rem; }
+  .flow .step b { display: block; color: var(--accent-2); margin-bottom: .2rem; }
+  .flow .arrow { align-self: center; color: var(--muted); font-size: 1.3rem; }
+  .ladder { display: flex; flex-direction: column; gap: .6rem; }
+  .rung { display: grid; grid-template-columns: 2.4rem 1fr 1.4fr; gap: 1rem; align-items: center; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px; padding: .8rem 1rem; }
+  .rung .n { font-size: 1.6rem; font-weight: 700; color: var(--p2); }
+  .rung .what { font-weight: 600; font-size: 1.1rem; } .rung .why { color: var(--muted); font-size: .98rem; }
+  .bar { display: flex; height: 2.4rem; border-radius: 6px; overflow: hidden; font-size: .78rem; font-weight: 600; }
+  .bar div { display: flex; align-items: center; justify-content: center; color: #0b0f14; white-space: nowrap; overflow: hidden; padding: 0 .3rem; }
+  .prefix { display: flex; flex-wrap: wrap; gap: 0; font-family: "IBM Plex Mono", monospace; font-size: .85rem; border-radius: 6px; overflow: hidden; }
+  .prefix span { padding: .55rem .7rem; }
+  .matrix { display: inline-grid; gap: 2px; }
+  .matrix i { width: 18px; height: 18px; background: var(--surface-2); border-radius: 2px; display: block; }
+  .matrix.frozen i { background: #3b4756; } .matrix.b i, .matrix.a i { background: var(--p2); }
+  .lora { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 1.4rem; font-weight: 600; }
+  .lora figure { display: flex; flex-direction: column; align-items: center; gap: .4rem; font-size: .8rem; color: var(--muted); font-weight: 400; }
+  .roadmap { display: grid; grid-template-columns: repeat(6, 1fr); gap: .5rem; }
+  .roadmap div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .7rem; font-size: .88rem; color: var(--muted); }
+  .roadmap div b { display: block; color: var(--text); font-size: .8rem; margin-bottom: .2rem; }
+  .roadmap div.now { border: 2px solid var(--accent); color: var(--text); }
+  .tag { display: inline-block; font-size: .75rem; padding: .1rem .45rem; border-radius: 4px; background: var(--surface-2); color: var(--muted); margin: .1rem .15rem .1rem 0; }
+  .center { text-align: center; align-items: center; }
+  .notes { display: none; }
+  /* chrome */
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--accent); transition: width .2s; z-index: 5; }
+  .counter { position: fixed; right: 1rem; bottom: .8rem; font-size: .8rem; color: var(--muted); font-family: "IBM Plex Mono", monospace; z-index: 5; }
+  .hint { position: fixed; left: 1rem; bottom: .8rem; font-size: .75rem; color: var(--muted); z-index: 5; }
+  .navbtn { position: fixed; bottom: .45rem; z-index: 6; background: var(--surface); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; width: 2.2rem; height: 2rem; cursor: pointer; font-size: 1rem; }
+  .navbtn.prev { right: 7.6rem; } .navbtn.next { right: 5.2rem; }
+  #notes-panel { position: fixed; left: 0; right: 0; bottom: 0; max-height: 38vh; overflow-y: auto; background: var(--surface-2);
+    border-top: 2px solid var(--warn); padding: 1rem 1.5rem 2.6rem; font-size: 1rem; line-height: 1.5; display: none; z-index: 4; }
+  #notes-panel.show { display: block; }
+  #notes-panel ul { padding-left: 1.2rem; } #notes-panel li { margin: .2rem 0; }
+  @media (max-width: 800px) {
+    .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; } .roadmap { grid-template-columns: repeat(3, 1fr); }
+    .rung { grid-template-columns: 2rem 1fr; } .rung .why { grid-column: 2; }
+    .hint { display: none; }
+  }
+  @media (max-width: 540px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } .roadmap { grid-template-columns: repeat(2, 1fr); } }
+  @media print { .slide { display: flex !important; page-break-after: always; height: auto; min-height: 100vh; }
+    .progress, .counter, .hint, .navbtn, #notes-panel { display: none !important; } html, body { overflow: visible; } }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- ============================== INTRO ============================== -->
+
+<section class="slide">
+  <div class="eyebrow">AI Upskill · Batch 5 · Layer 5 of 6</div>
+  <h1>Model Selection &amp; Customization</h1>
+  <p class="subtitle">Which model should we use, can we make it ours, and what will it cost?</p>
+  <aside class="notes">
+    <ul>
+      <li>Welcome. Today we stop asking "can an LLM do this?" (Layers 1 to 4) and start asking "which LLM, customised how, and for how much?"</li>
+      <li>No ML background needed. Everything today is about decisions an engineer makes, not maths.</li>
+      <li>Repo: ai-upskill-26-model-selection-and-customization. Ask everyone to have it cloned and <code>setup_check.py</code> passing.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">The three questions</div>
+  <h2>Your app works. Now your manager asks…</h2>
+  <div class="grid-3">
+    <div class="card"><h3 style="color:var(--p1)">1 · Which model?</h3><p>GPT, Claude, Gemini, Llama, DeepSeek… hosted or on our own servers? Does it need to see images?</p></div>
+    <div class="card"><h3 style="color:var(--p2)">2 · Can we make it ours?</h3><p>Our tone, our format, our domain. Prompting, RAG or fine-tuning? What's LoRA?</p></div>
+    <div class="card"><h3 style="color:var(--p3)">3 · What will it cost?</h3><p>Tokens, caching, rate limits, async, batching. Cents in the demo, thousands of dollars a month in production.</p></div>
+  </div>
+  <p class="thesis">The goal: <b>the cheapest, simplest setup that is good enough</b>, and the evidence to show it.</p>
+  <aside class="notes">
+    <ul>
+      <li>These three questions are the three parts of today. Every demo answers one of them.</li>
+      <li>Hammer the thesis: "good enough" is measured on your task, not on a leaderboard.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Setup <span class="demo-badge">DEMO</span></div>
+  <h2>One proxy, every provider</h2>
+  <div class="flow">
+    <div class="step"><b>Your code</b>OpenAI SDK</div><div class="arrow">→</div>
+    <div class="step"><b>LiteLLM proxy</b>llm.keyvalue.systems</div><div class="arrow">→</div>
+    <div class="step"><b>Providers</b>OpenAI · Anthropic · Google · DeepSeek · …</div>
+  </div>
+  <p>The proxy speaks the OpenAI API for every provider, so switching models is changing <b>one string</b>.</p>
+  <div class="table-wrap"><table>
+    <tr><th>role</th><th>model used today</th><th>what it stands for</th></tr>
+    <tr><td>small</td><td><code>openai/gpt-4.1-nano</code></td><td>the intern: fast, very cheap</td></tr>
+    <tr><td>mid</td><td><code>openai/gpt-5.4-mini</code></td><td>solid all-rounder</td></tr>
+    <tr><td>frontier</td><td><code>anthropic/claude-sonnet-4-6</code></td><td>the senior consultant</td></tr>
+    <tr><td>google</td><td><code>gemini/gemini-2.5-flash</code></td><td>a "thinking" model</td></tr>
+    <tr><td>open</td><td><code>deepseek/deepseek-chat</code></td><td>open-weight (you could self-host it)</td></tr>
+  </table></div>
+  <aside class="notes">
+    <ul>
+      <li>Run setup_check.py live. Five green ticks means we're good.</li>
+      <li>Explain the proxy in one line: a company gateway that holds the real provider keys, tracks spend and makes all providers look like OpenAI.</li>
+      <li>If a model is broken on the day, change it in .env. <code>python setup_check.py --list</code> shows what's available.</li>
+    </ul>
+  </aside>
+</section>
+
+<!-- ============================== PART 1 ============================== -->
+
+<section class="slide p1 center">
+  <div class="eyebrow">Part 1 of 3</div>
+  <h1 style="max-width:none">Choosing the right model</h1>
+  <p class="subtitle">Frontier vs open-weight · hosted vs self-hosted · picking by modality</p>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">An analogy</div>
+  <h2>Choosing a model is hiring</h2>
+  <div class="grid-3">
+    <div class="card"><h3>The intern</h3><p>Small models. Fast, very cheap, great at clear, repetitive tasks: sorting, tagging, extracting.</p><p class="big">$0.10</p><p>per million input tokens</p></div>
+    <div class="card"><h3>The experienced hire</h3><p>Mid models. Handles most everyday work: answering from documents, writing, simple tools.</p><p class="big">$0.75</p><p>per million input tokens</p></div>
+    <div class="card hl"><h3>The senior consultant</h3><p>Frontier models. Hard reasoning, agents, complex code, high stakes. Slower and pricey.</p><p class="big">$3 to $5</p><p>per million input tokens</p></div>
+  </div>
+  <p class="thesis">You don't hire a senior consultant to sort the mail. Start small, move up only when the task fails.</p>
+  <aside class="notes">
+    <ul>
+      <li>The analogy runs all session. Prices are real (proxy list price, Oct 2026): gpt-4.1-nano $0.10, gpt-5.4-mini $0.75, Sonnet 4.6 $3, GPT-5.5 $5 per million input tokens.</li>
+      <li>That's a 30 to 50× spread on input, and more on output. Model choice is the biggest cost lever there is.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">The landscape, October 2026</div>
+  <h2>Two families of models</h2>
+  <div class="grid-2">
+    <div class="card"><h3>Closed (proprietary)</h3>
+      <p>You call them through an API. You never see the weights.</p>
+      <ul><li><b>OpenAI</b>: GPT-5.5, GPT-5.4 mini / nano, GPT-4.1, Codex</li>
+          <li><b>Anthropic</b>: Claude Opus, Sonnet, Haiku</li>
+          <li><b>Google</b>: Gemini 3 Pro, Gemini Flash / Flash-Lite</li></ul>
+      <p style="margin-top:.6rem">Usually the strongest. Newest features first.</p></div>
+    <div class="card"><h3>Open-weight</h3>
+      <p>You can download the weights and run them anywhere.</p>
+      <ul><li><b>Meta</b>: Llama 4 (Scout, Maverick), Llama 3.x</li>
+          <li><b>Mistral</b>: Mistral Large / Medium / Small, Ministral, Codestral</li>
+          <li><b>Alibaba</b>: Qwen3, Qwen3-VL, Qwen3-Coder</li>
+          <li><b>DeepSeek</b>: V3 / V4 · <b>Google</b>: Gemma · <b>OpenAI</b>: gpt-oss</li></ul>
+      <p style="margin-top:.6rem">A few months behind the frontier, sometimes less. Full control.</p></div>
+  </div>
+  <p class="muted">"Open-weight" ≠ "open source": the licence decides what you may do (commercial use, user limits). Read it.</p>
+  <aside class="notes">
+    <ul>
+      <li>Open-weight models are also offered as hosted APIs by many companies (Groq, Together, Fireworks, OpenRouter, and DeepSeek itself). Open doesn't have to mean self-hosted.</li>
+      <li>Licences: Llama has its own community licence with conditions; Qwen, Mistral and gpt-oss are mostly Apache 2.0; DeepSeek uses MIT. Legal should check before production use.</li>
+      <li>Model names change every few months. Teach the families and tiers, not the version numbers.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">What to compare</div>
+  <h2>Eight things that matter more than the leaderboard</h2>
+  <div class="grid-4">
+    <div class="card"><h3>Quality</h3><p>On <em>your</em> task and your hard cases</p></div>
+    <div class="card"><h3>Cost</h3><p>$ per 1M input and output tokens. Output is 2 to 8× pricier</p></div>
+    <div class="card"><h3>Latency</h3><p>Time to first token, tokens per second. "Thinking" adds seconds</p></div>
+    <div class="card"><h3>Context window</h3><p>128k to 1M+ tokens. Bigger isn't free</p></div>
+    <div class="card"><h3>Modalities</h3><p>Text, images, audio, video, code</p></div>
+    <div class="card"><h3>Features</h3><p>Tool calling, structured outputs, caching, batch</p></div>
+    <div class="card"><h3>Data &amp; privacy</h3><p>Retention, training on your data, region</p></div>
+    <div class="card"><h3>Limits &amp; licence</h3><p>Rate limits, uptime, what the licence allows</p></div>
+  </div>
+  <aside class="notes">
+    <ul>
+      <li>Leaderboards (LMArena, SWE-bench, MMLU-Pro, GPQA…) measure averages on public tasks, and models are increasingly trained to do well on them.</li>
+      <li>Use leaderboards to make a shortlist of 3 or 4 models. Then a 20 to 50 example test set of YOUR real inputs picks the winner. That's what the next demo does in miniature.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">Demo 1 <span class="demo-badge">DEMO</span></div>
+  <h2>The bake-off: the same tasks on five models</h2>
+  <div class="run">python 01_choosing_models/01_model_bakeoff.py</div>
+  <ul class="points">
+    <li><b>Part A</b>: one messy ticket, five models. Compare the answer, the speed and the price.</li>
+    <li><b>Part B</b>: the scoreboard, plus the cost at 1 million requests a month.</li>
+  </ul>
+  <aside class="notes">
+    <ul>
+      <li>Run it. Takes about 20 seconds (Part B sends 75 requests concurrently, which we explain in Part 3).</li>
+      <li>In Part A, point at Gemini's "thinking" tokens: 600+ tokens of hidden reasoning to output one word. You pay for those.</li>
+      <li>If it fails mid-way, the next slide has the numbers from a rehearsal run.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">What we saw (rehearsal run, 1 Oct)</div>
+  <h2>Simple tasks: everyone passes. Reasoning: the gap shows.</h2>
+  <div class="table-wrap"><table>
+    <tr><th>model</th><th class="num">routing</th><th class="num">JSON</th><th class="num">reasoning</th><th class="num">at 1M requests/month</th></tr>
+    <tr><td>gpt-4.1-nano <span class="tag">small</span></td><td class="num">11/12</td><td class="num good">✓</td><td class="num">1/2</td><td class="num good">$8</td></tr>
+    <tr><td>gpt-5.4-mini <span class="tag">mid</span></td><td class="num">12/12</td><td class="num good">✓</td><td class="num">1/2</td><td class="num">$75</td></tr>
+    <tr><td>claude-sonnet-4-6 <span class="tag">frontier</span></td><td class="num">12/12</td><td class="num good">✓</td><td class="num good">2/2</td><td class="num bad">$516</td></tr>
+    <tr><td>gemini-2.5-flash <span class="tag">thinking</span></td><td class="num">11/12</td><td class="num good">✓</td><td class="num">1/2</td><td class="num">$499</td></tr>
+    <tr><td>deepseek-chat <span class="tag">open-weight</span></td><td class="num">12/12</td><td class="num good">✓</td><td class="num">1/2</td><td class="num">$18</td></tr>
+  </table></div>
+  <ul class="points">
+    <li>For routing, the $8 model is about as good as the $516 one: <b>65× cheaper</b>.</li>
+    <li>Counting the r's in "refrigerator repair request" tripped up most models (tokens, not letters: Layer 1).</li>
+    <li>Gemini Flash costs nearly as much as Sonnet here, because of its thinking tokens.</li>
+  </ul>
+  <aside class="notes">
+    <ul>
+      <li>Your live numbers will differ a little: models are non-deterministic, and 12 examples is a tiny eval.</li>
+      <li>The lesson isn't "nano is best". It's: the right model depends on the task, and you only know by testing.</li>
+      <li>Sonnet ignored "reply with just the number" and explained its working. That's more output tokens = more cost. Instruction following varies by model too.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">Hosted vs self-hosted</div>
+  <h2>Taxi or your own car?</h2>
+  <div class="table-wrap"><table>
+    <tr><th></th><th>🚕 Hosted API (taxi)</th><th>🚗 Self-hosted open model (own car)</th></tr>
+    <tr><td><b>Cost</b></td><td>Pay per token. Zero when idle</td><td>Pay per GPU-hour, 24/7, busy or not</td></tr>
+    <tr><td><b>Start-up</b></td><td>An API key, minutes</td><td>GPUs, serving stack, weeks</td></tr>
+    <tr><td><b>Quality</b></td><td>Best models available</td><td>Open models, a step behind the frontier</td></tr>
+    <tr><td><b>Latency</b></td><td>Network + shared queues</td><td>Can be very low, if well tuned</td></tr>
+    <tr><td><b>Privacy</b></td><td>Data goes to the provider (under contract)</td><td>Data never leaves your network</td></tr>
+    <tr><td><b>Control</b></td><td>Models get updated and retired</td><td>Pin a version forever; fine-tune freely</td></tr>
+    <tr><td><b>Ops</b></td><td>None</td><td>Scaling, monitoring, patching: yours</td></tr>
+  </table></div>
+  <p class="thesis">Default to hosted. Self-host when the data rules demand it, or when volume is huge and steady.</p>
+  <aside class="notes">
+    <ul>
+      <li>Taxi vs car: if you drive 5 km a week, owning a car is silly. If you drive all day, every day, it may pay. If you're not allowed in taxis (data rules), you need a car whatever it costs.</li>
+      <li>The wizard demo shows the maths in a moment.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">Privacy is a spectrum</div>
+  <h2>"Can the data leave?" has more than two answers</h2>
+  <div class="flow">
+    <div class="step"><b>Public API</b>OpenAI, Anthropic, Google. Business terms: no training on your data; zero-retention options</div><div class="arrow">→</div>
+    <div class="step"><b>Your cloud account</b>Azure OpenAI, AWS Bedrock, Google Vertex. Your region, your contract</div><div class="arrow">→</div>
+    <div class="step"><b>Your VPC</b>Open model on your cloud GPUs</div><div class="arrow">→</div>
+    <div class="step"><b>On-prem / air-gapped</b>Open model on your own hardware</div>
+  </div>
+  <p class="muted">Left to right: more control and more work. Most companies with compliance needs land on option 2.</p>
+  <div class="grid-3">
+    <div class="card"><h3>Laptop / dev</h3><p><code>Ollama</code>, LM Studio: run a 7 to 8B model locally in minutes</p></div>
+    <div class="card"><h3>Production serving</h3><p><code>vLLM</code>, SGLang, TGI: batching, many users per GPU</p></div>
+    <div class="card"><h3>Quantisation</h3><p>Store weights in 4 or 8 bits instead of 16: ~4× less memory, small quality loss</p></div>
+  </div>
+  <aside class="notes">
+    <ul>
+      <li>Many people think the choice is "OpenAI or self-host". Option 2 gives frontier models in your region under your cloud contract, and that's often what compliance actually needs.</li>
+      <li>Ollama is worth trying at home: <code>ollama run llama3.1</code> gives you a local model in minutes.</li>
+      <li>Awareness level only for vLLM and quantisation. Don't go deep.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">Picking by modality</div>
+  <h2>Not every model can see, hear or code equally well</h2>
+  <div class="table-wrap"><table>
+    <tr><th>You need…</th><th>Look for</th><th>Examples (Oct 2026)</th></tr>
+    <tr><td>Read images, screenshots, scans</td><td>Vision input</td><td>GPT-5.x, Claude, Gemini · open: Qwen3-VL, Llama 4, Gemma</td></tr>
+    <tr><td>Understand audio / calls</td><td>Speech-to-text, or native audio</td><td>Whisper, gpt-4o-transcribe, Gemini (native audio)</td></tr>
+    <tr><td>Speak</td><td>Text-to-speech / realtime voice</td><td>OpenAI TTS &amp; Realtime, Gemini Live, ElevenLabs</td></tr>
+    <tr><td>Write and fix code</td><td>Coding-tuned models</td><td>GPT-5.x Codex, Claude Sonnet / Opus · open: Qwen3-Coder, Devstral</td></tr>
+    <tr><td>Very long documents</td><td>Large context window</td><td>Gemini, GPT-4.1 / 5.5, Sonnet 4.6 (1M tokens), or RAG</td></tr>
+    <tr><td>Generate images</td><td>A different kind of model</td><td>gpt-image, Imagen, Flux</td></tr>
+    <tr><td>Search by meaning</td><td>Embedding models (Layer 3)</td><td>text-embedding-3, bge, MiniLM</td></tr>
+  </table></div>
+  <aside class="notes">
+    <ul>
+      <li>Phil covered the how of multimodal in Layer 2. This slide is about choosing.</li>
+      <li>Audio pipeline from Layer 2: transcribe first (cheap), then a normal text model.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">Demo 3 <span class="demo-badge">DEMO</span></div>
+  <h2>A receipt, three models</h2>
+  <div class="run">python 01_choosing_models/03_multimodal_choice.py</div>
+  <div class="grid-2">
+    <div class="card"><h3 class="bad">Text-only model (deepseek-chat)</h3><p>The image is dropped silently: <b>25 input tokens</b>. No error. In rehearsal it answered anyway: <i>"a total of 22.40"</i>. Completely made up.</p></div>
+    <div class="card"><h3 class="good">Vision models (gpt-4.1-nano, Gemini)</h3><p>Read <b>Rs 2,646</b> correctly. The image itself cost ~250 to 400 tokens.</p></div>
+  </div>
+  <p class="thesis">Check capabilities before you choose. A gateway can hide the error and the model will make up an answer.</p>
+  <aside class="notes">
+    <ul>
+      <li>Open data/generated/receipt.png first so people see the image.</li>
+      <li>This failure is silent, and that's what makes it dangerous: no exception, just a confident wrong answer. Part C of the script shows the capability table from the proxy's model hub.</li>
+      <li>Also note: images cost tokens. Downscale them before sending.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p1">
+  <div class="eyebrow">Part 1 in one slide</div>
+  <h2>How to choose</h2>
+  <ul class="points">
+    <li><b>Where can it run?</b> Privacy decides hosted API, your cloud account, or self-hosted.</li>
+    <li><b>What must it handle?</b> Modality filters the list.</li>
+    <li><b>How hard is it?</b> Start at the tier the task needs, then try one tier down.</li>
+    <li><b>How fast, how often?</b> Latency and volume decide the tier, caching and batching.</li>
+    <li><b>Prove it.</b> 20 to 50 real examples. The cheapest model that passes wins.</li>
+    <li><b>Stay portable.</b> A gateway (LiteLLM, OpenRouter) and one line of config, so you can switch next quarter.</li>
+  </ul>
+  <aside class="notes"><ul><li>Then the break. Back in 5 minutes for fine-tuning.</li></ul></aside>
+</section>
+
+<!-- ============================== PART 2 ============================== -->
+
+<section class="slide p2 center">
+  <div class="eyebrow">Part 2 of 3</div>
+  <h1 style="max-width:none">Fine-tuning, the concepts</h1>
+  <p class="subtitle">What it changes · when it's worth it · PEFT and LoRA at awareness level</p>
+  <aside class="notes"><ul><li>About 30 minutes. Concepts only: nobody will train a model today, and you don't need to know how to.</li></ul></aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">The customisation ladder</div>
+  <h2>Three ways to make a model yours. Climb only when you must.</h2>
+  <div class="ladder">
+    <div class="rung"><div class="n">1</div><div class="what">Prompting<br><span class="muted" style="font-weight:400">Give instructions</span></div><div class="why">Change what you ask: instructions, examples, output format. Minutes to try. Always first.</div></div>
+    <div class="rung"><div class="n">2</div><div class="what">RAG<br><span class="muted" style="font-weight:400">Hand over the manual</span></div><div class="why">Give the model the right documents at question time. For knowledge, facts, anything that changes.</div></div>
+    <div class="rung"><div class="n">3</div><div class="what">Fine-tuning<br><span class="muted" style="font-weight:400">Send on a training course</span></div><div class="why">Change the model's weights with your examples. For behaviour: style, format, a narrow skill, at scale.</div></div>
+  </div>
+  <p class="thesis">RAG is for <b>what the model knows</b>. Fine-tuning is for <b>how the model behaves</b>.</p>
+  <aside class="notes">
+    <ul>
+      <li>A new support agent: you give them instructions on day one (prompting). You give them the policy manual to look things up (RAG). After months, you send them on a course so they handle calls the company way without thinking (fine-tuning).</li>
+      <li>A course doesn't help someone remember next week's new policy. That's why fine-tuning is poor at new facts.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">What fine-tuning changes</div>
+  <h2>How a model becomes a model</h2>
+  <div class="flow">
+    <div class="step"><b>1 · Pre-training</b>Trillions of tokens of internet text. Learns language and world knowledge. Months, $10M+</div><div class="arrow">→</div>
+    <div class="step"><b>2 · Instruction tuning &amp; RLHF</b>Learns to follow instructions and chat helpfully. Done by the provider</div><div class="arrow">→</div>
+    <div class="step" style="border-color:var(--p2)"><b>3 · Your fine-tune</b>Hundreds to thousands of your examples. Hours, $1 to $1,000s</div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3 class="good">Fine-tuning is good at</h3><ul><li>A consistent tone, style or persona</li><li>A strict output format, every time</li><li>Narrow tasks: classifying into your 40 codes</li><li>Making a small model as good as a big one at one job</li><li>Shorter prompts (the examples move into the weights)</li></ul></div>
+    <div class="card"><h3 class="bad">Fine-tuning is bad at</h3><ul><li>Teaching new or changing facts (use RAG)</li><li>Fixing a bad prompt you haven't tried improving</li><li>Working with little or messy data</li><li>Anything you need next week (it's a project)</li><li>Explaining where an answer came from (RAG can cite)</li></ul></div>
+  </div>
+  <aside class="notes">
+    <ul>
+      <li>Steps 1 and 2 are what OpenAI, Anthropic and Meta do. We'd only ever do step 3, and it nudges what's already there.</li>
+      <li>A fine-tuned model can still hallucinate facts; it just sounds more like you while doing it.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">Demo 4 <span class="demo-badge">DEMO · QUIZ</span></div>
+  <h2>Prompt, RAG or fine-tune? You decide.</h2>
+  <div class="run">python 02_fine_tuning_concepts/01_prompt_rag_or_finetune.py</div>
+  <p>Eight real-world scenarios. For each one, the room shouts:</p>
+  <div class="grid-4">
+    <div class="card center"><p class="big">P</p><p>Prompting</p></div>
+    <div class="card center"><p class="big">R</p><p>RAG</p></div>
+    <div class="card center"><p class="big">F</p><p>Fine-tuning</p></div>
+    <div class="card center"><p class="big">R+F</p><p>Both</p></div>
+  </div>
+  <aside class="notes">
+    <ul>
+      <li>Run without --auto so it waits after each question. Read the scenario aloud, get answers from the room, then press Enter to reveal.</li>
+      <li>The tricky ones: #3 (new product, people say fine-tune, answer is RAG), #5 (fine-tune, because of scale and format), #7 (both).</li>
+      <li>This is the most interactive part of the session. Give it 8 to 10 minutes.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">Demo 5 <span class="demo-badge">DEMO</span></div>
+  <h2>The few-shot tax</h2>
+  <div class="run">python 02_fine_tuning_concepts/02_few_shot_tax.py</div>
+  <div class="grid-2">
+    <div class="card"><h3>Zero-shot</h3><p>48 input tokens. Polite, generic, long. Not our voice.</p></div>
+    <div class="card"><h3>8 examples (few-shot)</h3><p>639 input tokens. Sounds like BrightCart. But +591 tokens on <b>every call</b>.</p></div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>2M calls / month on gpt-4.1-nano</th><th class="num">per month</th><th class="num">one-off</th></tr>
+    <tr><td>Few-shot (8 examples)</td><td class="num">$182</td><td class="num">-</td></tr>
+    <tr><td>Few-shot + prompt caching</td><td class="num">$94</td><td class="num">-</td></tr>
+    <tr><td>Fine-tuned model, no examples</td><td class="num">$128</td><td class="num">~$1 training</td></tr>
+  </table></div>
+  <p class="muted">Surprise: caching can beat fine-tuning on cost. Fine-tune for quality you can't otherwise reach, not only to save money.</p>
+  <aside class="notes">
+    <ul>
+      <li>Fine-tuned models cost about 2× the base price per token at OpenAI, so a shorter prompt doesn't always win.</li>
+      <li>The few-shot answer may also include a made-up process or time. Examples teach style, not facts. That's the RAG lesson again.</li>
+      <li>Training cost is tiny. The real cost is collecting good examples and maintaining the model.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">How fine-tuning is done</div>
+  <h2>Four steps, and step 1 is the hard one</h2>
+  <div class="flow">
+    <div class="step"><b>1 · Collect</b>Hundreds to thousands of ideal input → output examples. Real logs, cleaned by experts</div><div class="arrow">→</div>
+    <div class="step"><b>2 · Format</b>JSONL: one conversation per line. Hold out 10 to 20% for testing</div><div class="arrow">→</div>
+    <div class="step"><b>3 · Train</b>Hosted: upload, click, wait. Open: LoRA on a GPU</div><div class="arrow">→</div>
+    <div class="step"><b>4 · Evaluate</b>Compare to the base model on the held-out set. Deploy the new model id</div>
+  </div>
+<pre>{"messages": [
+  {"role": "system",    "content": "You are BrightCart's support assistant."},
+  {"role": "user",      "content": "[Customer: Asha] I was charged twice for order #88231."},
+  {"role": "assistant", "content": "Hi Asha, you're right, order #88231 was charged twice, and I've
+                                    refunded the second payment. It will reach your card in 5 to 7
+                                    working days. Your reference is BC-55120."}]}</pre>
+  <div class="run">python 02_fine_tuning_concepts/04_dataset_preview.py</div>
+  <aside class="notes">
+    <ul>
+      <li>Hosted fine-tuning: OpenAI, Google Vertex, AWS Bedrock, Together, Fireworks. Open source: Hugging Face TRL + PEFT, Unsloth, Axolotl.</li>
+      <li>Run the dataset preview: it shows validation catching broken examples, including one with the wrong policy (30 days instead of 10). A model trained on that learns the mistake for good.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">Why full fine-tuning is heavy</div>
+  <h2>A 7B model has 7 billion numbers. Training updates all of them.</h2>
+  <div class="grid-3">
+    <div class="card"><h3>Full fine-tune · 7B</h3><p class="big">~112 GB</p><p>GPU memory: weights + gradients + optimiser state ≈ 16 bytes per parameter. Several 80 GB GPUs.</p></div>
+    <div class="card"><h3>Full fine-tune · 70B</h3><p class="big">~1.1 TB</p><p>A cluster. And a full 140 GB copy of the model for every fine-tune you make.</p></div>
+    <div class="card hl"><h3>The trick</h3><p>What if we froze the model and trained only a tiny add-on?</p><p class="big" style="color:var(--p2)">PEFT</p><p>Parameter-Efficient Fine-Tuning</p></div>
+  </div>
+  <aside class="notes"><ul><li>Don't dwell on the bytes-per-parameter maths. The point: full fine-tuning needs lots of hardware, and PEFT is the workaround.</li></ul></aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">LoRA · Low-Rank Adaptation</div>
+  <h2>Don't rewrite the textbook. Add sticky notes.</h2>
+  <div class="lora">
+    <figure><div class="matrix frozen" id="mW"></div>W (frozen)<br>4096 × 4096 = 16.8M</figure>
+    <span>+</span>
+    <figure><div class="matrix b" id="mB"></div>B<br>4096 × 8</figure>
+    <span>×</span>
+    <figure><div class="matrix a" id="mA"></div>A<br>8 × 4096</figure>
+    <span>=</span>
+    <figure><div class="matrix" id="mW2"></div>W + BA<br>new behaviour</figure>
+  </div>
+  <ul class="points">
+    <li>The original weights <b>W</b> stay frozen. LoRA learns two thin matrices, <b>B</b> and <b>A</b>.</li>
+    <li>B × A is a full-size change built from very few numbers: <b>65k instead of 16.8M</b> per matrix.</li>
+    <li>Across a 7B model: <b>~0.1 to 1%</b> of the parameters trained, often close to full fine-tuning quality for style and format.</li>
+    <li>The rank <b>r</b> (here 8) is the size of the sticky note. Typical: 8 to 64.</li>
+  </ul>
+  <aside class="notes">
+    <ul>
+      <li>You never need to implement this. Know: frozen base + small trainable patch = cheap, fast, swappable.</li>
+      <li>Run 03_lora_intuition.py Part A to show a toy 6×6 version with real numbers.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">Demo 6 <span class="demo-badge">DEMO</span></div>
+  <h2>QLoRA and swappable adapters</h2>
+  <div class="run">python 02_fine_tuning_concepts/03_lora_intuition.py</div>
+  <div class="table-wrap"><table>
+    <tr><th>GPU memory to train</th><th class="num">full fine-tune</th><th class="num">LoRA</th><th class="num">QLoRA (4-bit base)</th></tr>
+    <tr><td>7B model</td><td class="num">~112 GB</td><td class="num">~17 GB</td><td class="num good">~5 GB</td></tr>
+    <tr><td>70B model</td><td class="num">~1,120 GB</td><td class="num">~168 GB</td><td class="num good">~49 GB</td></tr>
+  </table></div>
+  <div class="grid-2">
+    <div class="card"><h3>QLoRA</h3><p>Compress the frozen base to 4 bits, then LoRA on top. A 7B fine-tune fits a gaming GPU or a free Colab T4.</p></div>
+    <div class="card"><h3>Adapters are swappable</h3><p>A 7B adapter is ~34 MB vs a 14 GB model. One server, one base model, a different adapter per customer or task (vLLM multi-LoRA).</p></div>
+  </div>
+  <aside class="notes">
+    <ul>
+      <li>Other PEFT methods exist (adapters, prompt tuning). LoRA and QLoRA are what you'll see in practice.</li>
+      <li>Hosted fine-tuning APIs probably use something like LoRA behind the scenes. You just upload JSONL.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p2">
+  <div class="eyebrow">Part 2 in one slide</div>
+  <h2>Before you fine-tune, ask</h2>
+  <ul class="points">
+    <li>Have I really pushed prompting: clear instructions, examples, structured outputs?</li>
+    <li>Is the problem missing <b>knowledge</b>? Then it's RAG.</li>
+    <li>Do I have <b>hundreds to thousands</b> of high-quality examples, and an eval to prove the fine-tune helped?</li>
+    <li>Will I <b>retrain</b> when the base model is upgraded or retired?</li>
+    <li>Have I checked whether a bigger model with a good prompt, or caching, is simply cheaper?</li>
+  </ul>
+  <div class="grid-3">
+    <div class="card"><h3 class="warn">Overfitting</h3><p>Memorises the examples, fails on new inputs</p></div>
+    <div class="card"><h3 class="warn">Forgetting</h3><p>Gets better at your task, worse at others</p></div>
+    <div class="card"><h3 class="warn">Bad data</h3><p>Learns every mistake in the examples, permanently</p></div>
+  </div>
+  <aside class="notes"><ul><li>In 2026, most teams never need to fine-tune. Prompting + RAG + a well-chosen model covers most cases. Knowing when NOT to fine-tune is the skill.</li></ul></aside>
+</section>
+
+<!-- ============================== PART 3 ============================== -->
+
+<section class="slide p3 center">
+  <div class="eyebrow">Part 3 of 3</div>
+  <h1 style="max-width:none">Cost, caching &amp; scale</h1>
+  <p class="subtitle">Token economics · prompt caching · rate limits · async and batching</p>
+  <aside class="notes"><ul><li>About 30 minutes. This is the most immediately useful part for anyone shipping AI features.</li></ul></aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Token economics</div>
+  <h2>You pay for every token, in and out</h2>
+  <p class="thesis" style="font-family:'IBM Plex Mono',monospace;font-size:1.05rem">cost = input tokens × input price + output tokens × output price<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(prices are per 1 million tokens)</p>
+  <p>One chatbot request on gpt-5.4-mini, by token count:</p>
+  <div class="bar">
+    <div style="width:13%;background:#7aa7d9">system 600</div>
+    <div style="width:53%;background:#5ec4a8">RAG chunks 2,500</div>
+    <div style="width:26%;background:#b48ef0">history 1,200</div>
+    <div style="width:1%;background:#e8b86d"></div>
+    <div style="width:7%;background:#e57373">out</div>
+  </div>
+  <p class="muted">The user's question is 40 tokens: <b>1%</b>. The context is 92%. The answer is 7% of the tokens but <b>33% of the cost</b>, because output costs 6× more.</p>
+  <div class="grid-3">
+    <div class="card"><h3>1 token ≈ 4 characters</h3><p>≈ ¾ of an English word</p></div>
+    <div class="card"><h3>Indian languages</h3><p>Often 1.5 to 3× more tokens for the same meaning</p></div>
+    <div class="card"><h3>Thinking tokens</h3><p>Reasoning models bill hidden thinking as output</p></div>
+  </div>
+  <aside class="notes">
+    <ul>
+      <li>Ask: "Where's most of the money going?" Most people guess the question or the answer. It's the context we send on every call.</li>
+      <li>That's why RAG chunk count, history length and caching are the real levers.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Demo 7 <span class="demo-badge">DEMO</span></div>
+  <h2>Same app, same traffic, 50× different bill</h2>
+  <div class="run">python 03_cost_and_caching/01_token_economics.py</div>
+  <div class="table-wrap"><table>
+    <tr><th>model</th><th class="num">1 request</th><th class="num">10k / month</th><th class="num">1M / month</th></tr>
+    <tr><td>gpt-4.1-nano</td><td class="num">$0.0006</td><td class="num">$6</td><td class="num good">$574</td></tr>
+    <tr><td>deepseek-chat</td><td class="num">$0.0014</td><td class="num">$14</td><td class="num">$1,362</td></tr>
+    <tr><td>gpt-5.4-mini</td><td class="num">$0.0048</td><td class="num">$48</td><td class="num">$4,830</td></tr>
+    <tr><td>claude-sonnet-4-6</td><td class="num">$0.0183</td><td class="num">$183</td><td class="num">$18,270</td></tr>
+    <tr><td>gpt-5.5</td><td class="num">$0.0322</td><td class="num">$322</td><td class="num bad">$32,200</td></tr>
+  </table></div>
+  <p class="muted">Then Part D: the levers (smaller model, fewer chunks, shorter history, cap the output, caching, batch) and what each saves.</p>
+  <aside class="notes">
+    <ul>
+      <li>Prototype on 10k requests: nobody cares about $48 vs $183. At 1M requests it's a hiring decision.</li>
+      <li>Part A of the script shows Hindi and Malayalam token counts. Good moment to ask if anyone's product serves Indian-language users.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Prompt caching</div>
+  <h2>Pay full price for the same prompt only once</h2>
+  <p>When many requests start with the same long text, the provider keeps the processed start of the prompt and reuses it. Like a kitchen prepping ingredients once for many dishes.</p>
+  <div class="prefix">
+    <span style="background:#2f5e4f">system prompt + handbook (3,600 tokens) ← cached, ~90% off</span>
+    <span style="background:#5a4a7a">user question ← normal price</span>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Provider</th><th>How</th><th>Cached input price</th><th>Notes</th></tr>
+    <tr><td>OpenAI</td><td>Automatic</td><td>10% (GPT-5.x) to 25% (GPT-4.1)</td><td>Prompts ≥ 1,024 tokens</td></tr>
+    <tr><td>Anthropic</td><td>Explicit <code>cache_control</code></td><td>10%; writing costs 125%</td><td>5-minute or 1-hour lifetime</td></tr>
+    <tr><td>Google Gemini</td><td>Automatic, or explicit caches</td><td>~10 to 25%</td><td>Explicit caches charge storage</td></tr>
+    <tr><td>DeepSeek</td><td>Automatic</td><td>10%</td><td>On by default</td></tr>
+  </table></div>
+  <aside class="notes">
+    <ul>
+      <li>It's also faster: the model skips re-reading the cached part, so time to first token drops.</li>
+      <li>Where it pays: long system prompts, few-shot examples, agents (tool definitions are sent on every step), chat (the history keeps the same start), many questions about one big document.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">The one rule</div>
+  <h2>Static first, dynamic last</h2>
+  <p>The cache matches the <b>start</b> of the prompt exactly. One changed character early on, and everything after it is a miss.</p>
+  <h3 class="bad">✗ Breaks the cache every call</h3>
+  <div class="prefix">
+    <span style="background:#7a3a3a">Current time: 10:42:17</span>
+    <span style="background:#555">rules + handbook (3,600 tokens)</span>
+    <span style="background:#555">question</span>
+  </div>
+  <h3 class="good">✓ Caches 92% of the prompt</h3>
+  <div class="prefix">
+    <span style="background:#2f5e4f">rules + handbook (3,600 tokens)</span>
+    <span style="background:#5a4a7a">Current time: 10:42:17 · user: Asha · question</span>
+  </div>
+  <p class="muted">Same for user names, retrieved chunks, A/B test flags: anything that changes goes at the end.</p>
+  <aside class="notes"><ul><li>This is the most common caching bug in real code. Part C of the next demo shows it live: cached = 0.</li></ul></aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Demo 8 <span class="demo-badge">DEMO</span></div>
+  <h2>Caching, live</h2>
+  <div class="run">python 03_cost_and_caching/02_prompt_caching.py</div>
+  <div class="grid-2">
+    <div class="table-wrap"><table>
+      <tr><th>OpenAI (auto)</th><th class="num">cached</th><th class="num">cost</th></tr>
+      <tr><td>call 1</td><td class="num">0</td><td class="num">$0.0029</td></tr>
+      <tr><td>call 2</td><td class="num good">3,328</td><td class="num good">$0.0007</td></tr>
+      <tr><td>call 3</td><td class="num good">3,328</td><td class="num good">$0.0006</td></tr>
+    </table></div>
+    <div class="table-wrap"><table>
+      <tr><th>Claude (explicit)</th><th class="num">cached</th><th class="num">cost</th></tr>
+      <tr><td>call 1 (write)</td><td class="num warn">4,066 written</td><td class="num">$0.0161</td></tr>
+      <tr><td>call 2</td><td class="num good">4,066</td><td class="num good">$0.0023</td></tr>
+      <tr><td>call 3</td><td class="num good">4,066</td><td class="num good">$0.0017</td></tr>
+    </table></div>
+  </div>
+  <p><b>75 to 90% cheaper</b> from the second call on. Part E: our proxy also caches whole <b>responses</b>: an identical request comes back in 50 ms.</p>
+  <div class="table-wrap"><table>
+    <tr><th></th><th>Prompt caching</th><th>Response caching</th><th>Semantic caching</th></tr>
+    <tr><td>Reuses</td><td>the processed prompt start</td><td>the whole answer</td><td>an answer to a similar question</td></tr>
+    <tr><td>Matches</td><td>same prefix</td><td>identical request</td><td>same meaning (embeddings)</td></tr>
+  </table></div>
+  <aside class="notes">
+    <ul>
+      <li>Numbers on the slide are from rehearsal. Live numbers will be very close.</li>
+      <li>Response caching is great for FAQs but returns the same answer every time, even when temperature would vary it. Semantic caching links back to Layer 3 embeddings.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Rate limits</div>
+  <h2>"429 Too Many Requests": what to do</h2>
+  <div class="grid-3">
+    <div class="card"><h3>RPM</h3><p>Requests per minute</p></div>
+    <div class="card"><h3>TPM</h3><p>Tokens per minute: often the one you hit first</p></div>
+    <div class="card"><h3>RPD / budget</h3><p>Per day, or a spend cap on your key</p></div>
+  </div>
+  <p>Limits are per model and per account or key, and they rise as you spend more. Servers also fail: 500, 503, timeouts.</p>
+  <h3>Retry with exponential backoff + jitter</h3>
+  <div class="flow">
+    <div class="step"><b>429</b>wait ~0.25 s</div><div class="arrow">→</div>
+    <div class="step"><b>429</b>wait ~0.5 s</div><div class="arrow">→</div>
+    <div class="step"><b>429</b>wait ~1 s</div><div class="arrow">→</div>
+    <div class="step"><b>429</b>wait ~2 s</div><div class="arrow">→</div>
+    <div class="step" style="border-color:var(--accent-2)"><b>200 ✓</b>done</div>
+  </div>
+  <p class="muted">Jitter = a random part of the wait, so 100 clients don't all retry at the same moment. Retry 429/5xx/timeouts; never 400 or 401.</p>
+  <div class="run">python 03_cost_and_caching/03_rate_limits_retries.py</div>
+  <aside class="notes">
+    <ul>
+      <li>Part A shows real rate-limit headers from the proxy, and the proxy's own cost for the call.</li>
+      <li>Part B: a fake rate-limited API. No retry: 3 of 10 succeed. Backoff: 10 of 10.</li>
+      <li>In real code: the OpenAI and Anthropic SDKs retry for you (max_retries), or use the tenacity library. Gateways like LiteLLM add fallback models.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Async &amp; batching</div>
+  <h2>Stop waiting in line</h2>
+  <p>An LLM call is ~99% waiting. While one waits, send the next.</p>
+  <div class="grid-2">
+<pre># sequential: 12 × ~1-2 s
+for t in tickets:
+    classify(t)
+
+# concurrent: ~ the slowest one
+await asyncio.gather(*[classify(t) for t in tickets])</pre>
+<pre># concurrent, but polite
+gate = asyncio.Semaphore(4)
+
+async def one(t):
+    async with gate:      # max 4 in flight
+        return await classify(t)</pre>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Need</th><th>Use</th><th>Saving</th></tr>
+    <tr><td>A user is waiting</td><td>async + Semaphore, streaming</td><td>time</td></tr>
+    <tr><td>Many small items</td><td>several items in one prompt</td><td>repeated instructions</td></tr>
+    <tr><td>Thousands of items, results by tomorrow</td><td>provider <b>Batch API</b></td><td class="good">~50% of the price</td></tr>
+  </table></div>
+  <div class="run">python 03_cost_and_caching/04_async_batching.py</div>
+  <aside class="notes">
+    <ul>
+      <li>Async doesn't change the cost, only the waiting. The Batch API halves the cost but takes up to 24 hours. Use it for evals, nightly reports, back-filling data.</li>
+      <li>Latency on a shared proxy is noisy. If the numbers look odd, rerun.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide p3">
+  <div class="eyebrow">Part 3 in one slide</div>
+  <h2>The cost levers, biggest first</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Lever</th><th class="num">Typical saving</th><th>Watch out for</th></tr>
+    <tr><td>Smaller model (or route easy requests to one)</td><td class="num good">50 to 95%</td><td>quality on hard cases</td></tr>
+    <tr><td>Prompt caching</td><td class="num good">up to 90% of cached input</td><td>static first, dynamic last</td></tr>
+    <tr><td>Batch API</td><td class="num good">50%</td><td>up to 24 h wait</td></tr>
+    <tr><td>Less context: fewer RAG chunks, summarised history</td><td class="num">10 to 40%</td><td>answers missing facts</td></tr>
+    <tr><td>Cap output length, turn thinking down</td><td class="num">10 to 30%</td><td>truncated answers</td></tr>
+    <tr><td>Response caching</td><td class="num">100% on repeat requests</td><td>stale answers</td></tr>
+  </table></div>
+  <p class="thesis">Measure quality after every change. Cheaper is only better if it still works.</p>
+  <aside class="notes"><ul><li>All of these stack. The capstone next combines the top two: routing and caching.</li></ul></aside>
+</section>
+
+<!-- ============================== WRAP-UP ============================== -->
+
+<section class="slide">
+  <div class="eyebrow">Capstone <span class="demo-badge">DEMO</span></div>
+  <h2>A model router: everything from today</h2>
+  <div class="flow">
+    <div class="step"><b>Ticket</b>"I was charged twice…"</div><div class="arrow">→</div>
+    <div class="step"><b>Triage</b>small model: simple or complex? (~$0.00002)</div><div class="arrow">→</div>
+    <div class="step"><b>simple →</b>small model + cached handbook</div>
+    <div class="step" style="border-color:var(--accent)"><b>complex →</b>frontier model + cached handbook</div>
+  </div>
+  <div class="run">python 04_capstone_model_router.py</div>
+  <div class="table-wrap"><table>
+    <tr><th>Rehearsal run</th><th class="num">per 1M tickets</th></tr>
+    <tr><td>Router (9 small, 3 strong, + triage)</td><td class="num good">$974</td></tr>
+    <tr><td>Always the strong model</td><td class="num">$3,385</td></tr>
+  </table></div>
+  <p class="muted">71% cheaper. But read the answers: triage sent the account-takeover ticket to the small model, and the small model invented a customer name. <b>How would we catch that automatically? → Layer 6.</b></p>
+  <aside class="notes">
+    <ul>
+      <li>Part 1: right model per request. Part 3: caching and async. Part 2: a fine-tuned small model could replace the cheap one and close the quality gap.</li>
+      <li>Read one or two of the small model's answers aloud and ask the room what's wrong. It's the perfect bridge to evaluation tomorrow.</li>
+    </ul>
+  </aside>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Takeaways</div>
+  <h2>Five things to remember</h2>
+  <ul class="points">
+    <li><b>No best model, only the best model for the job.</b> Test 3 or 4 on your own examples; pick the cheapest that passes.</li>
+    <li><b>Hosted by default.</b> Self-host for data rules or huge steady volume. Your cloud account is the middle path.</li>
+    <li><b>Prompt → RAG → fine-tune.</b> RAG for knowledge, fine-tuning for behaviour. Most teams never need to fine-tune.</li>
+    <li><b>LoRA</b> trains a tiny patch on a frozen model: cheap, fast, swappable. Know it exists.</li>
+    <li><b>Tokens are money.</b> Context is the cost, caching is the discount, async is the speed-up, batch is half price.</li>
+  </ul>
+  <aside class="notes"><ul><li>Read them slowly. Ask for one-sentence reactions: which one surprised you?</li></ul></aside>
+</section>
+
+<section class="slide center">
+  <div class="eyebrow">That's a wrap</div>
+  <h1 style="max-width:none">Thank you 🙏</h1>
+  <p class="subtitle">Questions?</p>
+  <aside class="notes"><ul><li>Thank everyone and open the floor for questions.</li></ul></aside>
+</section>
+
+</div>
+
+<div id="notes-panel"><div id="notes-body"></div></div>
+<div class="progress" id="progress"></div>
+<div class="hint">← → or click · N notes · T theme · F fullscreen</div>
+<button class="navbtn prev" id="prev" aria-label="Previous slide">‹</button>
+<button class="navbtn next" id="next" aria-label="Next slide">›</button>
+<div class="counter" id="counter"></div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const progress = document.getElementById("progress");
+  const counter = document.getElementById("counter");
+  const panel = document.getElementById("notes-panel");
+  const notesBody = document.getElementById("notes-body");
+  let i = 0;
+
+  function fromHash() {
+    const n = parseInt(location.hash.slice(1), 10);
+    return Number.isFinite(n) && n >= 1 && n <= slides.length ? n - 1 : 0;
+  }
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle("active", k === i));
+    progress.style.width = ((i + 1) / slides.length * 100) + "%";
+    counter.textContent = (i + 1) + " / " + slides.length;
+    const notes = slides[i].querySelector(".notes");
+    notesBody.innerHTML = notes ? notes.innerHTML : "<p>No notes for this slide.</p>";
+    if (location.hash !== "#" + (i + 1)) history.replaceState(null, "", "#" + (i + 1));
+  }
+  document.addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key === "n" || e.key === "N") panel.classList.toggle("show");
+    else if (e.key === "t" || e.key === "T") {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
+      try { localStorage.setItem("l5-theme", root.dataset.theme); } catch (_) {}
+    }
+    else if (e.key === "f" || e.key === "F") {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.();
+    }
+  });
+  document.getElementById("prev").addEventListener("click", (e) => { e.stopPropagation(); show(i - 1); });
+  document.getElementById("next").addEventListener("click", (e) => { e.stopPropagation(); show(i + 1); });
+  document.getElementById("deck").addEventListener("click", (e) => {
+    if (e.target.closest("a, pre, .run, table")) return;   // let people select code
+    if (window.getSelection().toString()) return;
+    show(e.clientX < window.innerWidth / 3 ? i - 1 : i + 1);
+  });
+  window.addEventListener("hashchange", () => show(fromHash()));
+  try { const t = localStorage.getItem("l5-theme"); if (t) document.documentElement.dataset.theme = t; } catch (_) {}
+
+  // LoRA picture: draw the matrices (W 8×8, B 8×1, A 1×8, and W+BA tinted)
+  function grid(id, rows, cols, tint) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.gridTemplateColumns = `repeat(${cols}, 18px)`;
+    for (let k = 0; k < rows * cols; k++) {
+      const c = document.createElement("i");
+      if (tint) c.style.background = `color-mix(in srgb, var(--p2) ${15 + ((k * 37) % 45)}%, #3b4756)`;
+      el.appendChild(c);
+    }
+  }
+  grid("mW", 8, 8); grid("mB", 8, 1); grid("mA", 1, 8); grid("mW2", 8, 8, true);
+
+  show(fromHash());
+})();
+</script>
+</body>
+</html>
