@@ -65,13 +65,6 @@ and cost, green `✓` and red `✗` mark what each part is showing. Lines marked
 
 The whole run costs a few cents.
 
-## Slides and docs
-
-- `slides/index.html`: open in a browser. Arrow keys or click to move, **N** for speaker notes, **T** light/dark, **F** fullscreen.
-- `docs/presenter_guide.md`: run sheet, talk track, demo checklist, likely questions with answers.
-- `docs/cheat_sheet.md`: the session on one page.
-- `docs/learning_resources.md`: where to go deeper.
-
 ## Repo layout
 
 ```
@@ -79,7 +72,7 @@ lab/            shared plumbing: proxy client, measured chat() call, prices, pri
 data/           support tickets, the BrightCart handbook (~3,600 tokens), a sample fine-tuning dataset
 01_choosing_models/  02_fine_tuning_concepts/  03_cost_and_caching/   the scripts, each folder with a README
 04_capstone_model_router.py
-slides/  docs/
+slides/
 ```
 
 Prices in `lab/pricing.py` come from the proxy's model hub and provider pricing pages on 1 October 2026. They're there
